@@ -1,4 +1,17 @@
-# High-glucose cluster replication with PCA and stacking
+# Glucose pseudo-label evaluation
+
+## Reproducible demo
+
+Run `python main.py` after installing `requirements.txt`. In the verified local run (Python 3.13, pandas 3.0.6, scikit-learn 1.9.1), the console ended with:
+
+```text
+Best KNN: {'n_neighbors': 7, 'weights': 'uniform'}
+Best NN: {'alpha': 0.0001, 'hidden_layer_sizes': (10,)}
+Best Meta Learner (DecisionTree): {'max_depth': 2, 'min_samples_split': 2}
+Pseudo-label replication accuracy (not diagnostic accuracy): 0.9184
+```
+
+This is a demonstration of reproducing K-means-generated labels, **not** a diabetes prediction score. The [original DAMG6105 coursework repository](https://github.com/jiabeiliu/DAMG6105-final-project) is retained as a historical snapshot; use this repository for the corrected pipeline and tests. Both repositories contain the same underlying CSV data (with different filenames), so they are one project, not two independent studies.
 
 Coursework by **Zainab Cheema and Jiabei Liu**. This repository is an educational experiment in preprocessing, K-means pseudo-labels, PCA, and stacked classifiers. It is **not** a diabetes diagnosis or clinical risk-prediction model.
 
