@@ -2,6 +2,8 @@
 
 ## Reproducible demo
 
+[View the read-only demo page](https://jiabeiliu.github.io/glucose-pseudolabel-evaluation/) for the experiment flow and a recorded local result. The page does not train a model in the browser or predict diabetes; run the commands below to execute the actual pipeline.
+
 Run `python main.py` after installing `requirements.txt`. In the verified local run (Python 3.13, pandas 3.0.6, scikit-learn 1.9.1), the console ended with:
 
 ```text
