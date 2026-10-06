@@ -1,48 +1,45 @@
-import pandas as pd
+"""Leakage-aware preprocessing for the coursework pseudo-label experiment."""
+
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
+import pandas as pd
 from sklearn.cluster import KMeans
-from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
+from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+
 
 def preprocess_and_pca(filepath):
-    df = pd.read_csv(filepath)
+    """Fit transformations on training rows only, then make cluster pseudo-labels.
 
-    # Step 1: Remove outliers using IQR
-    def remove_outliers_iqr(df):
-        df_cleaned = df.copy()
-        for col in df.columns:
-            if df[col].dtype != 'O':
-                Q1 = df[col].quantile(0.25)
-                Q3 = df[col].quantile(0.75)
-                IQR = Q3 - Q1
-                lower_bound = Q1 - 1.5 * IQR
-                upper_bound = Q3 + 1.5 * IQR
-                df_cleaned = df_cleaned[(df_cleaned[col] >= lower_bound) & (df_cleaned[col] <= upper_bound)]
-        return df_cleaned
+    These labels indicate membership in the higher-glucose cluster. They are
+    not observed diabetes diagnoses and must not be described as such.
+    """
+    frame = pd.read_csv(filepath)
+    features = frame.select_dtypes(include="number").drop(columns=["Outcome"], errors="ignore")
+    required = {"Glucose", "BMI", "Age"}
+    if not required.issubset(features.columns):
+        raise ValueError(f"Input needs numeric columns: {', '.join(sorted(required))}")
+    if len(features) < 10:
+        raise ValueError("At least 10 rows are needed for this train/test experiment")
 
-    df = remove_outliers_iqr(df)
-
-    # Step 2: Impute missing values with median
-    df = df.fillna(df.median(numeric_only=True))
-
-    # Step 3: Normalize all columns
+    train_raw, test_raw = train_test_split(features, test_size=0.2, random_state=42)
+    imputer = SimpleImputer(strategy="median")
+    train_imputed = imputer.fit_transform(train_raw)
+    test_imputed = imputer.transform(test_raw)
     scaler = MinMaxScaler()
-    df_normalized = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
+    train_scaled = pd.DataFrame(scaler.fit_transform(train_imputed), columns=features.columns)
+    test_scaled = pd.DataFrame(scaler.transform(test_imputed), columns=features.columns)
 
-    # Step 4: Unsupervised Learning for Generating Labels
-    clustering_features = df_normalized[['Glucose', 'BMI', 'Age']]
-    kmeans = KMeans(n_clusters=2, random_state=42, n_init=10)
-    clusters = kmeans.fit_predict(clustering_features)
-    diabetes_cluster = np.argmax(kmeans.cluster_centers_[:, 0])
-    df_normalized['Outcome'] = (clusters == diabetes_cluster).astype(int)
+    cluster_columns = ["Glucose", "BMI", "Age"]
+    clusterer = KMeans(n_clusters=2, random_state=42, n_init=10)
+    train_clusters = clusterer.fit_predict(train_scaled[cluster_columns])
+    test_clusters = clusterer.predict(test_scaled[cluster_columns])
+    higher_glucose_cluster = int(np.argmax(clusterer.cluster_centers_[:, 0]))
+    y_train = (train_clusters == higher_glucose_cluster).astype(int)
+    y_test = (test_clusters == higher_glucose_cluster).astype(int)
 
-    # Step 5: Feature Extraction with PCA
-    X = df_normalized.drop(columns=['Outcome'])
-    y = df_normalized['Outcome']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     pca = PCA(n_components=3)
-    X_train_pca = pd.DataFrame(pca.fit_transform(X_train), columns=['PC1', 'PC2', 'PC3'])
-    X_test_pca = pd.DataFrame(pca.transform(X_test), columns=['PC1', 'PC2', 'PC3'])
-
-    return X_train_pca, X_test_pca, y_train, y_test
+    x_train = pd.DataFrame(pca.fit_transform(train_scaled), columns=["PC1", "PC2", "PC3"])
+    x_test = pd.DataFrame(pca.transform(test_scaled), columns=["PC1", "PC2", "PC3"])
+    return x_train, x_test, y_train, y_test

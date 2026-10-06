@@ -1,63 +1,37 @@
-# DAMG6105-final-project-
-👩‍💻 Author
-Zainab Cheema & Jiabei Liu
-# 🩺 Diabetes Clustering & PCA Analysis
+# High-glucose cluster replication with PCA and stacking
 
-This project demonstrates a semi-supervised learning approach for classifying diabetes outcomes using unsupervised clustering (KMeans) and dimensionality reduction (PCA). The objective is to simulate a classification task by generating synthetic labels from patterns in the data.
+Coursework by **Zainab Cheema and Jiabei Liu**. This repository is an educational experiment in preprocessing, K-means pseudo-labels, PCA, and stacked classifiers. It is **not** a diabetes diagnosis or clinical risk-prediction model.
 
----
+## Question and method
 
-## 📁 Dataset
+Can supervised classifiers reproduce the partition made by a K-means model on glucose, BMI, and age? The input CSV has no observed diabetes outcome. The label `1` means “assigned to the cluster whose center has higher glucose,” **not** “has diabetes.” Accuracy therefore measures agreement with a generated cluster label, not medical accuracy.
 
-The dataset used is `diabetes_project.csv`, which contains medical attributes such as:
+```text
+CSV → train/test split → train-fitted imputer and scaler
+    → train-fitted K-means pseudo-labels → train-fitted PCA
+    → Naive Bayes / KNN / MLP → decision-tree stacker → held-out agreement
+```
 
-- Glucose
-- BMI
-- Age
-- Insulin
-- Skin Thickness
-- Blood Pressure
-- Pregnancies
-- Diabetes Pedigree Function
+The split now happens before fitting imputation, scaling, K-means, or PCA, so test rows do not influence those transformations. The test labels come from `KMeans.predict` using the training-fitted clusters. The earlier coursework version fit transformations before splitting; do not compare its numbers directly with the revised pipeline. IQR outlier removal was dropped from this evaluation path because it previously used full-dataset thresholds and changed the holdout population.
 
----
+## Reproduce
 
-## ⚙️ How It Works
+Use Python 3.11+:
 
-1. **Data Preprocessing**  
-   - Outliers are removed.
-   - Missing values are imputed.
-   - Features are normalized.
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m unittest discover -s tests -v
+python main.py
+```
 
-2. **Label Generation with KMeans**  
-   - Unsupervised clustering is applied on selected features (Glucose, BMI, Age).
-   - Clusters are interpreted as:
-     - `1`: Diabetes (higher average Glucose)
-     - `0`: No Diabetes
+`main.py` reads the included `diabetes_project.csv`; the nested grid searches and MLP may take several minutes. The dataset's original source and licensing are not documented in this repository, so verify provenance before redistributing it or claiming broader generalization. The separate `stroke_dataset_adaptation.py` is a historical coursework extension, not a validated transfer-learning experiment.
 
-3. **Dimensionality Reduction using PCA**  
-   - Principal Component Analysis is applied to reduce feature space to 3 components.
+In one local run of the revised code (Python 3.13, pandas 3.0.6, scikit-learn 1.9.1), held-out pseudo-label replication accuracy was **0.9184**. This is a reproducibility reference for that environment, **not** a clinical result or a guarantee across versions and datasets.
 
-4. **Train/Test Split**  
-   - The dataset is split (e.g., 80% training, 20% testing) after transformation.
+## Interpretation and next steps
 
-5. **Classification**  
-   - A super learner model uses base classifiers (Naïve Bayes, KNN, Neural Network) and a Decision Tree meta-learner to classify based on the generated labels.
-
----
-
-## 🚀 Usage
-
-```python
-from your_script_name import preprocess_and_pca
-
-X_train_pca, X_test_pca, y_train, y_test = preprocess_and_pca("data/diabetes.csv")
-
-finalproject/
-├── data_preprocessing.py         # Preprocessing + PCA + KMeans
-├── super_learner.py              # Ensemble model training
-├── stroke_dataset_adaptation.py # (optional transfer learning)
-├── main.py                       # Run end-to-end pipeline
-├── diabetes_project.csv          # Dataset
-├── README.md
-└── requirements.txt
+- Report the holdout number as **pseudo-label replication accuracy** only. A classifier can score well here simply because it learns the same feature partition as K-means.
+- Compare against a direct K-means assignment baseline and record class balance, confusion matrix, and seed variability before making stronger claims.
+- A genuine health-outcome study would require verified outcome labels, documented dataset provenance, appropriate validation, subgroup evaluation, and clinical oversight. This repository does not provide those.

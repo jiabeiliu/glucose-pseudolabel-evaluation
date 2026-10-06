@@ -65,5 +65,5 @@ def run_super_learner(X_train_pca, y_train, X_test_pca, y_test):
     final_predictions = meta_learner.predict(test_meta_features)
 
     accuracy = accuracy_score(y_test, final_predictions)
-    print(f"\n🎯 Final Super Learner Accuracy: {accuracy:.4f}")
+    print(f"\nPseudo-label replication accuracy (not diagnostic accuracy): {accuracy:.4f}")
     return accuracy
